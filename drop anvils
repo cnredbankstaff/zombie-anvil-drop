@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zombie Anvil Drop</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Press Start 2P', cursive; }
+    
+    @keyframes zombieWalk {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+    
+    @keyframes rainbow {
+      0% { background: linear-gradient(135deg, #ff0000, #ff7f00); }
+      14% { background: linear-gradient(135deg, #ff7f00, #ffff00); }
+      28% { background: linear-gradient(135deg, #ffff00, #00ff00); }
+      42% { background: linear-gradient(135deg, #00ff00, #0000ff); }
+      57% { background: linear-gradient(135deg, #0000ff, #4b0082); }
+      71% { background: linear-gradient(135deg, #4b0082, #9400d3); }
+      85% { background: linear-gradient(135deg, #9400d3, #ff0000); }
+      100% { background: linear-gradient(135deg, #ff0000, #ff7f00); }
+    }
+    
+    .rainbow-player {
+      animation: rainbow 2s linear infinite;
+    }
+    
+    .zombie {
+      animation: zombieWalk 0.4s ease-in-out infinite;
+    }
+    
+    @keyframes anvilFall {
+      0% { transform: translateY(0) rotate(0deg); }
+      100% { transform: translateY(500px) rotate(15deg); }
+    }
+    
+    .anvil-falling {
+      animation: anvilFall 0.8s ease-in forwards;
+    }
+    
+    @keyframes bulletTravel {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full overflow-hidden">
+  <div id="app" class="h-full w-full relative" style="background: linear-gradient(180deg, #1a0a2e 0%, #2d1b4e 50%, #1a0a2e 100%);"><!-- Stars background -->
+   <div id="stars" class="absolute inset-0 pointer-events-none overflow-hidden"></div><!-- Game Title -->
+   <div class="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+    <h1 id="game-title" class="text-lg md:text-2xl text-yellow-400 drop-shadow-lg text-center" style="text-shadow: 0 0 10px #fbbf24;">Zombie Anvil Drop</h1>
+   </div><!-- HUD -->
+   <div class="absolute top-16 left-4 z-20 bg-black/60 p-3 rounded-lg border-2 border-purple-500">
+    <div class="text-yellow-300 text-xs mb-2">
+     ⭐ XP: <span id="xp-display">0</span>
+    </div>
+    <div class="text-red-400 text-xs mb-2">
+     💀 Kills: <span id="kills-display">0</span>
+    </div>
+    <div class="text-green-400 text-xs mb-2">
+     🍖 Food: <span id="food-display">100</span>%
+    </div>
+    <div class="text-blue-400 text-xs mb-2">
+     💧 Water: <span id="water-display">100</span>%
+    </div>
+    <div class="text-orange-400 text-xs">
+     🧱 Ladders: <span id="ladder-count">3</span>
+    </div>
+    <div class="text-gray-400 text-xs mt-1">
+     🔩 Anvils: <span id="anvil-count">3</span>
+    </div>
+    <div id="sniper-status" class="text-purple-400 text-xs mt-1 hidden">
+     🔫 SNIPER!
+    </div>
+    <div class="text-pink-400 text-xs mt-1">
+     🏆 Trophies: <span id="trophy-count">0</span>
+    </div>
+    <div class="text-cyan-400 text-xs mt-1">
+     🌊 Wave: <span id="wave-count">1</span>
+    </div>
+   </div><!-- Shop Button --> <button id="shop-btn" class="absolute top-16 right-4 z-20 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white text-xs px-4 py-2 rounded-lg border-2 border-green-400 transition-all"> 🛒 SHOP </button> <!-- Shop Modal -->
+   <div id="shop-modal" class="absolute inset-0 z-30 hidden flex items-center justify-center bg-black/70">
+    <div class="bg-gradient-to-b from-gray-800 to-gray-900 p-6 rounded-xl border-4 border-yellow-500 max-w-sm w-full mx-4">
+     <h2 class="text-yellow-400 text-lg mb-4 text-center">🛒 SHOP</h2>
+     <div class="space-y-3"><button id="buy-food" class="w-full bg-red-700 hover:bg-red-600 text-white text-xs p-3 rounded-lg border-2 border-red-400 transition-all"> 🍖 Food (+25%) - 5 XP </button> <button id="buy-water" class="w-full bg-blue-700 hover:bg-blue-600 text-white text-xs p-3 rounded-lg border-2 border-blue-400 transition-all"> 💧 Water (+25%) - 5 XP </button> <button id="buy-ladder" class="w-full bg-orange-700 hover:bg-orange-600 text-white text-xs p-3 rounded-lg border-2 border-orange-400 transition-all"> 🧱 Ladder (+1) - 3 XP </button> <button id="buy-anvil" class="w-full bg-gray-600 hover:bg-gray-500 text-white text-xs p-3 rounded-lg border-2 border-gray-400 transition-all"> 🔩 Anvil (+1) - 3 XP </button>
+     </div><button id="close-shop" class="w-full mt-4 bg-purple-700 hover:bg-purple-600 text-white text-xs p-2 rounded-lg border-2 border-purple-400"> ✖ Close </button>
+    </div>
+   </div><!-- Controls Info -->
+   <div class="absolute bottom-4 left-4 z-20 bg-black/60 p-2 rounded-lg border border-purple-500 text-xs">
+    <div class="text-gray-300">
+     WASD/Arrows: Move
+    </div>
+    <div class="text-orange-300">
+     L: Place Ladder
+    </div>
+    <div class="text-gray-400">
+     Space: Drop Anvil
+    </div>
+    <div id="sniper-hint" class="text-purple-300 hidden">
+     Click: Shoot!
+    </div>
+   </div><!-- Game Canvas -->
+   <div id="game-area" class="absolute inset-0 overflow-hidden"><!-- Ground -->
+    <div id="ground" class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-green-900 to-green-700 border-t-4 border-green-500"></div><!-- Platforms -->
+    <div id="platforms"></div><!-- Ladders Container -->
+    <div id="ladders"></div><!-- Player -->
+    <div id="player" class="absolute w-8 h-8 rainbow-player rounded-sm border-2 border-white shadow-lg" style="bottom: 64px; left: 50px;">
+     <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+    </div><!-- Zombies Container -->
+    <div id="zombies"></div><!-- Anvils Container -->
+    <div id="anvils"></div><!-- Bullets Container -->
+    <div id="bullets"></div>
+   </div><!-- Message Display -->
+   <div id="message" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 text-center hidden">
+    <div class="bg-black/80 p-6 rounded-xl border-4 border-yellow-400">
+     <p id="message-text" class="text-yellow-300 text-sm"></p>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      game_title: "Zombie Anvil Drop"
+    };
+
+    let config = { ...defaultConfig };
+
+    // Game State
+    const gameState = {
+      xp: 0,
+      kills: 0,
+      food: 100,
+      water: 100,
+      ladders: 3,
+      anvils: 3,
+      hasSniper: false,
+      sniperUnlocked: false,
+      trophies: 0,
+      wave: 1,
+      isBossWave: false,
+      bossHealth: 0,
+      player: { x: 50, y: 64, vx: 0, vy: 0, onGround: true, onLadder: false },
+      zombies: [],
+      placedLadders: [],
+      fallingAnvils: [],
+      bullets: [],
+      keys: {},
+      gameWidth: 800,
+      gameHeight: 600
+    };
+
+    // Initialize stars
+    function createStars() {
+      const starsContainer = document.getElementById('stars');
+      starsContainer.innerHTML = '';
+      for (let i = 0; i < 50; i++) {
+        const star = document.createElement('div');
+        star.className = 'absolute rounded-full bg-white';
+        star.style.width = Math.random() * 3 + 1 + 'px';
+        star.style.height = star.style.width;
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 60 + '%';
+        star.style.opacity = Math.random() * 0.7 + 0.3;
+        starsContainer.appendChild(star);
+      }
+    }
+
+    // Initialize zombies
+    function spawnZombies() {
+      gameState.zombies = [];
+      const zombiesContainer = document.getElementById('zombies');
+      zombiesContainer.innerHTML = '';
+      
+      // Check if boss wave
+      gameState.isBossWave = gameState.wave % 10 === 0;
+      
+      const zombieCount = gameState.isBossWave ? 1 : 5;
+      
+      for (let i = 0; i < zombieCount; i++) {
+        const zombie = {
+          id: i,
+          x: gameState.gameWidth - 80,
+          y: 64,
+          vx: 0,
+          alive: true,
+          isBoss: gameState.isBossWave,
+          health: gameState.isBossWave ? 5 : 1,
+          awakened: false
+        };
+        gameState.zombies.push(zombie);
+        
+        if (gameState.isBossWave) {
+          gameState.bossHealth = 5;
+        }
+        
+        const zombieEl = document.createElement('div');
+        zombieEl.id = `zombie-${i}`;
+        zombieEl.className = 'absolute zombie';
+        
+        if (gameState.isBossWave) {
+          zombieEl.innerHTML = `
+            <div class="w-8 h-12 bg-gradient-to-b from-red-500 to-red-700 rounded-t-lg border-2 border-red-400 relative">
+              <div class="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl">👑</div>
+              <div class="absolute top-2 left-1 w-2 h-2 bg-yellow-400 rounded-full"></div>
+              <div class="absolute top-2 right-1 w-2 h-2 bg-yellow-400 rounded-full"></div>
+              <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-3 h-1 bg-red-900 rounded"></div>
+            </div>
+          `;
+        } else {
+          zombieEl.innerHTML = `
+            <div class="w-6 h-8 bg-gradient-to-b from-green-500 to-green-700 rounded-t-lg border-2 border-green-400 relative">
+              <div class="absolute top-1 left-1 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+              <div class="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+              <div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-2 h-1 bg-green-900 rounded"></div>
+            </div>
+          `;
+        }
+        
+        zombieEl.style.left = zombie.x + 'px';
+        zombieEl.style.bottom = zombie.y + 'px';
+        zombiesContainer.appendChild(zombieEl);
+      }
+      
+      if (gameState.isBossWave) {
+        showMessage('🔴 BOSS WAVE! 👑', 3000);
+      }
+    }
+
+    // Update HUD
+    function updateHUD() {
+      document.getElementById('xp-display').textContent = gameState.xp;
+      document.getElementById('kills-display').textContent = gameState.kills;
+      document.getElementById('food-display').textContent = Math.max(0, Math.round(gameState.food));
+      document.getElementById('water-display').textContent = Math.max(0, Math.round(gameState.water));
+      document.getElementById('ladder-count').textContent = gameState.ladders;
+      document.getElementById('anvil-count').textContent = gameState.anvils;
+      document.getElementById('trophy-count').textContent = gameState.trophies;
+      document.getElementById('wave-count').textContent = gameState.wave;
+      
+      if (gameState.hasSniper) {
+        document.getElementById('sniper-status').classList.remove('hidden');
+        document.getElementById('sniper-hint').classList.remove('hidden');
+      }
+    }
+
+    // Show message
+    function showMessage(text, duration = 2000) {
+      const messageEl = document.getElementById('message');
+      const messageText = document.getElementById('message-text');
+      messageText.textContent = text;
+      messageEl.classList.remove('hidden');
+      setTimeout(() => messageEl.classList.add('hidden'), duration);
+    }
+
+    // Place ladder
+    function placeLadder() {
+      if (gameState.ladders <= 0) {
+        showMessage('No ladders left!');
+        return;
+      }
+      
+      gameState.ladders--;
+      const ladder = {
+        x: gameState.player.x,
+        y: 64,
+        height: 120
+      };
+      gameState.placedLadders.push(ladder);
+      
+      // Wake up all zombies when first ladder is placed
+      gameState.zombies.forEach(zombie => {
+        zombie.awakened = true;
+      });
+      
+      const laddersContainer = document.getElementById('ladders');
+      const ladderEl = document.createElement('div');
+      ladderEl.className = 'absolute';
+      ladderEl.style.left = ladder.x + 'px';
+      ladderEl.style.bottom = ladder.y + 'px';
+      ladderEl.style.width = '16px';
+      ladderEl.style.height = ladder.height + 'px';
+      ladderEl.innerHTML = `
+        <div class="w-full h-full bg-gradient-to-r from-orange-700 via-orange-500 to-orange-700 relative border-x-2 border-orange-400">
+          ${Array(6).fill().map((_, i) => `<div class="absolute w-full h-1 bg-orange-800" style="top: ${i * 20}px;"></div>`).join('')}
+        </div>
+      `;
+      laddersContainer.appendChild(ladderEl);
+      updateHUD();
+    }
+
+    // Drop anvil
+    function dropAnvil() {
+      if (gameState.anvils <= 0) {
+        showMessage('No anvils left!');
+        return;
+      }
+      
+      gameState.anvils--;
+      const anvil = {
+        x: gameState.player.x,
+        y: gameState.player.y + 32,
+        falling: true
+      };
+      gameState.fallingAnvils.push(anvil);
+      
+      const anvilsContainer = document.getElementById('anvils');
+      const anvilEl = document.createElement('div');
+      anvilEl.className = 'absolute anvil-falling';
+      anvilEl.style.left = anvil.x + 'px';
+      anvilEl.style.bottom = anvil.y + 'px';
+      anvilEl.innerHTML = `
+        <div class="w-10 h-8 relative">
+          <div class="absolute bottom-0 w-10 h-4 bg-gradient-to-b from-gray-500 to-gray-700 rounded"></div>
+          <div class="absolute bottom-3 left-2 w-6 h-5 bg-gradient-to-b from-gray-400 to-gray-600 rounded-t"></div>
+        </div>
+      `;
+      anvilsContainer.appendChild(anvilEl);
+      
+      // Check collision after animation
+      setTimeout(() => {
+        checkAnvilCollision(anvil, anvilEl);
+      }, 700);
+      
+      updateHUD();
+    }
+
+    // Check anvil collision
+    function checkAnvilCollision(anvil, anvilEl) {
+      gameState.zombies.forEach(zombie => {
+        if (!zombie.alive) return;
+        
+        const dx = Math.abs(anvil.x - zombie.x);
+        if (dx < 30) {
+          zombie.health--;
+          
+          if (zombie.health <= 0) {
+            zombie.alive = false;
+            gameState.kills++;
+            gameState.xp += gameState.isBossWave ? 50 : 10;
+            
+            const zombieEl = document.getElementById(`zombie-${zombie.id}`);
+            if (zombieEl) {
+              zombieEl.innerHTML = gameState.isBossWave ? `<div class="text-2xl">👑💀</div>` : `<div class="text-2xl">💀</div>`;
+              setTimeout(() => zombieEl.remove(), 1000);
+            }
+            
+            showMessage(gameState.isBossWave ? '+50 XP! BOSS DOWN!' : '+10 XP!');
+            checkWaveComplete();
+            updateHUD();
+          } else {
+            showMessage(`Boss Health: ${zombie.health}/5`);
+          }
+        }
+      });
+      
+      setTimeout(() => anvilEl.remove(), 300);
+    }
+
+    // Check sniper unlock
+    function checkSniperUnlock() {
+      const aliveZombies = gameState.zombies.filter(z => z.alive).length;
+      
+      if (aliveZombies === 0 && !gameState.sniperUnlocked) {
+        gameState.sniperUnlocked = true;
+        gameState.hasSniper = true;
+        showMessage('🔫 SNIPER UNLOCKED! Click to shoot!', 3000);
+        updateHUD();
+        
+        // Start first wave
+        setTimeout(() => {
+          gameState.wave = 1;
+          showMessage('⚠️ Wave 1 Starting!', 2000);
+          setTimeout(spawnZombies, 2000);
+        }, 3000);
+      }
+    }
+
+    // Check wave complete
+    function checkWaveComplete() {
+      const aliveZombies = gameState.zombies.filter(z => z.alive).length;
+      
+      if (aliveZombies === 0 && gameState.sniperUnlocked) {
+        gameState.wave++;
+        gameState.xp += 5;
+        
+        if (gameState.wave % 10 === 0) {
+          showMessage(`🏆 Boss defeated! Wave ${gameState.wave} complete!`, 2000);
+          gameState.trophies++;
+          gameState.xp += 100;
+          updateHUD();
+          setTimeout(spawnZombies, 800);
+        } else if (gameState.wave === 100) {
+          showMessage('🏆🏆🏆 100 WAVES COMPLETE! YOU WIN! 🏆🏆🏆', 3000);
+          gameState.trophies++;
+          gameState.xp += 500;
+          updateHUD();
+          setTimeout(() => {
+            gameState.wave = 1;
+            showMessage('⚠️ Infinite mode continues...', 2000);
+            setTimeout(spawnZombies, 2000);
+          }, 3500);
+        } else {
+          showMessage(`🎉 Wave ${gameState.wave} incoming!`, 800);
+          updateHUD();
+          setTimeout(spawnZombies, 800);
+        }
+      }
+    }
+
+    // Shoot sniper
+    function shootSniper(targetX, targetY) {
+      if (!gameState.hasSniper) return;
+      
+      const playerEl = document.getElementById('player');
+      const rect = playerEl.getBoundingClientRect();
+      const gameArea = document.getElementById('game-area').getBoundingClientRect();
+      
+      const startX = gameState.player.x + 16;
+      const startY = gameArea.height - gameState.player.y - 16;
+      
+      const bullet = document.createElement('div');
+      bullet.className = 'absolute w-2 h-2 bg-yellow-400 rounded-full';
+      bullet.style.left = startX + 'px';
+      bullet.style.top = startY + 'px';
+      bullet.style.boxShadow = '0 0 10px #fbbf24';
+      document.getElementById('bullets').appendChild(bullet);
+      
+      const dx = targetX - startX;
+      const dy = targetY - startY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const vx = (dx / dist) * 15;
+      const vy = (dy / dist) * 15;
+      
+      let bx = startX, by = startY;
+      const bulletInterval = setInterval(() => {
+        bx += vx;
+        by += vy;
+        bullet.style.left = bx + 'px';
+        bullet.style.top = by + 'px';
+        
+        // Check zombie hit
+        gameState.zombies.forEach(zombie => {
+          if (!zombie.alive) return;
+          const gameArea = document.getElementById('game-area').getBoundingClientRect();
+          const zombieScreenY = gameArea.height - zombie.y - 32;
+          
+          if (Math.abs(bx - zombie.x) < 25 && Math.abs(by - zombieScreenY) < 40) {
+            zombie.health--;
+            
+            if (zombie.health <= 0) {
+              zombie.alive = false;
+              gameState.kills++;
+              gameState.xp += gameState.isBossWave ? 50 : 15;
+              
+              const zombieEl = document.getElementById(`zombie-${zombie.id}`);
+              if (zombieEl) {
+                zombieEl.innerHTML = gameState.isBossWave ? `<div class="text-2xl">👑💀</div>` : `<div class="text-2xl">💀</div>`;
+                setTimeout(() => zombieEl.remove(), 1000);
+              }
+              
+              showMessage(gameState.isBossWave ? '+50 XP! Boss Headshot!' : '+15 XP! Headshot!');
+              checkWaveComplete();
+              updateHUD();
+              clearInterval(bulletInterval);
+              bullet.remove();
+            } else {
+              showMessage(`Boss Health: ${zombie.health}/5`);
+              clearInterval(bulletInterval);
+              bullet.remove();
+            }
+          }
+        });
+        
+        if (bx < 0 || bx > gameState.gameWidth || by < 0 || by > gameState.gameHeight) {
+          clearInterval(bulletInterval);
+          bullet.remove();
+        }
+      }, 20);
+    }
+
+    // Game loop
+    function gameLoop() {
+      const player = gameState.player;
+      const gameArea = document.getElementById('game-area');
+      gameState.gameWidth = gameArea.clientWidth;
+      gameState.gameHeight = gameArea.clientHeight;
+      
+      // Horizontal movement
+      if (gameState.keys['ArrowLeft'] || gameState.keys['KeyA']) {
+        player.vx = -4;
+      } else if (gameState.keys['ArrowRight'] || gameState.keys['KeyD']) {
+        player.vx = 4;
+      } else {
+        player.vx = 0;
+      }
+      
+      // Check if on ladder
+      player.onLadder = false;
+      gameState.placedLadders.forEach(ladder => {
+        if (Math.abs(player.x - ladder.x) < 20 && player.y >= ladder.y && player.y <= ladder.y + ladder.height) {
+          player.onLadder = true;
+        }
+      });
+      
+      // Vertical movement on ladder
+      if (player.onLadder) {
+        if (gameState.keys['ArrowUp'] || gameState.keys['KeyW']) {
+          player.vy = 3;
+        } else if (gameState.keys['ArrowDown'] || gameState.keys['KeyS']) {
+          player.vy = -3;
+        } else {
+          player.vy = 0;
+        }
+      } else {
+        // Gravity
+        if (!player.onGround) {
+          player.vy -= 0.5;
+        }
+      }
+      
+      // Apply velocity
+      player.x += player.vx;
+      player.y += player.vy;
+      
+      // Bounds
+      player.x = Math.max(0, Math.min(gameState.gameWidth - 32, player.x));
+      
+      // Ground collision
+      if (player.y <= 64) {
+        player.y = 64;
+        player.vy = 0;
+        player.onGround = true;
+      } else {
+        player.onGround = false;
+      }
+      
+      // Update player position
+      const playerEl = document.getElementById('player');
+      playerEl.style.left = player.x + 'px';
+      playerEl.style.bottom = player.y + 'px';
+      
+      // Update zombies
+      gameState.zombies.forEach(zombie => {
+        if (!zombie.alive) return;
+        
+        // Only move if awakened
+        if (zombie.awakened) {
+          const direction = gameState.player.x > zombie.x ? 1 : -1;
+          zombie.vx = direction * 0.5;
+          zombie.x += zombie.vx;
+        }
+        
+        const zombieEl = document.getElementById(`zombie-${zombie.id}`);
+        if (zombieEl) {
+          zombieEl.style.left = zombie.x + 'px';
+          zombieEl.style.transform = zombie.vx > 0 ? 'scaleX(1)' : 'scaleX(-1)';
+        }
+        
+        // Check player collision
+        if (Math.abs(player.x - zombie.x) < 24 && Math.abs(player.y - zombie.y) < 32) {
+          gameState.food -= 5;
+          gameState.water -= 5;
+          updateHUD();
+          
+          if (gameState.food <= 0 || gameState.water <= 0) {
+            showMessage('GAME OVER! Refresh to restart.', 5000);
+          }
+        }
+      });
+      
+      // Drain resources slowly
+      gameState.food -= 0.01;
+      gameState.water -= 0.015;
+      
+      if (gameState.food <= 20 || gameState.water <= 20) {
+        if (Math.random() < 0.01) {
+          showMessage('⚠️ Low resources! Visit shop!');
+        }
+      }
+      
+      updateHUD();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Shop functionality
+    function setupShop() {
+      document.getElementById('shop-btn').addEventListener('click', () => {
+        document.getElementById('shop-modal').classList.remove('hidden');
+      });
+      
+      document.getElementById('close-shop').addEventListener('click', () => {
+        document.getElementById('shop-modal').classList.add('hidden');
+      });
+      
+      document.getElementById('buy-food').addEventListener('click', () => {
+        if (gameState.xp >= 5) {
+          gameState.xp -= 5;
+          gameState.food = Math.min(100, gameState.food + 25);
+          showMessage('🍖 Food +25%!');
+          updateHUD();
+        } else {
+          showMessage('Not enough XP!');
+        }
+      });
+      
+      document.getElementById('buy-water').addEventListener('click', () => {
+        if (gameState.xp >= 5) {
+          gameState.xp -= 5;
+          gameState.water = Math.min(100, gameState.water + 25);
+          showMessage('💧 Water +25%!');
+          updateHUD();
+        } else {
+          showMessage('Not enough XP!');
+        }
+      });
+      
+      document.getElementById('buy-ladder').addEventListener('click', () => {
+        if (gameState.xp >= 3) {
+          gameState.xp -= 3;
+          gameState.ladders++;
+          showMessage('🧱 Ladder +1!');
+          updateHUD();
+        } else {
+          showMessage('Not enough XP!');
+        }
+      });
+      
+      document.getElementById('buy-anvil').addEventListener('click', () => {
+        if (gameState.xp >= 3) {
+          gameState.xp -= 3;
+          gameState.anvils++;
+          showMessage('🔩 Anvil +1!');
+          updateHUD();
+        } else {
+          showMessage('Not enough XP!');
+        }
+      });
+    }
+
+    // Input handling
+    document.addEventListener('keydown', (e) => {
+      gameState.keys[e.code] = true;
+      
+      if (e.code === 'KeyL') {
+        placeLadder();
+      }
+      if (e.code === 'Space') {
+        dropAnvil();
+        e.preventDefault();
+      }
+    });
+    
+    document.addEventListener('keyup', (e) => {
+      gameState.keys[e.code] = false;
+    });
+    
+    // Sniper shooting
+    document.getElementById('game-area').addEventListener('click', (e) => {
+      if (!gameState.hasSniper) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      shootSniper(x, y);
+    });
+
+    // Element SDK
+    async function onConfigChange(cfg) {
+      config = { ...defaultConfig, ...cfg };
+      document.getElementById('game-title').textContent = config.game_title || defaultConfig.game_title;
+    }
+
+    function mapToCapabilities(cfg) {
+      return {
+        recolorables: [],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      };
+    }
+
+    function mapToEditPanelValues(cfg) {
+      return new Map([
+        ["game_title", cfg.game_title || defaultConfig.game_title]
+      ]);
+    }
+
+    // Initialize
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+
+    createStars();
+    spawnZombies();
+    setupShop();
+    updateHUD();
+    gameLoop();
+    
+    showMessage('Kill 5 zombies to unlock SNIPER!', 3000);
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d51f80fb34fb3aa',t:'MTc3MjMwMzE3My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
